@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
+import fakeredis
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
@@ -12,12 +13,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.auth.api_key import api_key_auth, get_db
+from app.auth.rate_limit import get_redis
 from app.db import Base
 from app.models.api_key import ApiKey
 from app.models.run import Run as _Run
 from app.models.workflow import Workflow as _Workflow
 
 _REGISTERED = (_Run, _Workflow)
+_FAKE_REDIS = fakeredis.FakeRedis()
 
 
 @pytest.fixture
@@ -57,6 +60,7 @@ def client(session_factory: sessionmaker[Session]) -> Iterator[TestClient]:
         return {"caller_key_name": caller.name}
 
     test_app.dependency_overrides[get_db] = _override_db
+    test_app.dependency_overrides[get_redis] = lambda: _FAKE_REDIS
     yield TestClient(test_app)
 
 
